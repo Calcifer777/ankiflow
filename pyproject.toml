@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "cssselect>=1.3.0",
+    "ddgs>=9.10.0",
     "genanki>=0.13.1",
     "gtts>=2.5.4",
     "krdict-py>=3.0.2",

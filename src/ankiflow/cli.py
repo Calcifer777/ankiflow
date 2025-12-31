@@ -12,6 +12,7 @@ from rich.console import Console
 from rich.table import Table
 from dotenv import load_dotenv
 from gtts import gTTS
+from ddgs import DDGS
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -31,12 +32,9 @@ if API_KEY:
     krdict.set_key(API_KEY)
 
 # Anki/Media Config
-PEXELS_API_KEY = os.environ.get("PEXELS_API_KEY")
 MEDIA_DIR = "media_files"
 QUERY_PREFIX = os.getenv("ANKIFLOW_QUERY_PREFIX", "")
 QUERY_SUFFIX = os.getenv("ANKIFLOW_QUERY_SUFFIX", "")
-PEXELS_SEARCH_URL = "https://api.pexels.com/v1/search"
-PEXELS_HEADERS = {"Authorization": PEXELS_API_KEY} if PEXELS_API_KEY else {}
 
 # Fixed Retry Settings
 MAX_RETRIES = 3
@@ -79,30 +77,28 @@ def ensure_media_dir():
     stop=stop_after_attempt(MAX_RETRIES + 1),
     reraise=True,
 )
-def _fetch_pexels_api(url, headers, params=None):
+def _fetch_url(url, headers=None, params=None):
     resp = requests.get(url, headers=headers, params=params, timeout=10)
     if resp.status_code == 429:
         print(f"Rate limited. Retrying...")
-    sleep(1)
     return resp
 
 
-def get_pexels_image_url(query: str) -> str | None:
-    if not PEXELS_API_KEY:
-        print("Warning: PEXELS_API_KEY not found in .env")
-        return None
-
-    search_query = f"{QUERY_PREFIX} {query} {QUERY_SUFFIX}"
-    params = {"query": search_query, "per_page": 1}
-
+def get_image_url(query: str) -> str | None:
+    search_query = f"{QUERY_PREFIX} {query} {QUERY_SUFFIX}".strip()
     try:
-        response = _fetch_pexels_api(PEXELS_SEARCH_URL, PEXELS_HEADERS, params=params)
-        if response.status_code == 200:
-            data = response.json()
-            if data.get("photos"):
-                return data["photos"][0]["src"]["small"]
+        with DDGS() as ddgs:
+            results = ddgs.images(
+                query=search_query,
+                region="wt-wt",
+                safesearch="on",
+                size="Small",
+                max_results=1,
+            )
+            if results:
+                return results[0]["image"]
     except Exception as e:
-        print(f"Failed to search Pexels for '{query}' after retries: {e}")
+        print(f"Failed to search DuckDuckGo for '{query}': {e}")
 
     return None
 
@@ -113,7 +109,7 @@ def download_file(url: str, filename: str) -> str | None:
         return path
 
     try:
-        response = _fetch_pexels_api(url, PEXELS_HEADERS)
+        response = _fetch_url(url)
         if response.status_code == 200:
             with open(path, "wb") as f:
                 f.write(response.content)
@@ -317,6 +313,15 @@ def generate_anki(
     output_file: str = typer.Option(
         "deck.apkg", "--output", "-o", help="Output filename."
     ),
+    include_eng_kor: bool = typer.Option(
+        True, "--eng-kor/--no-eng-kor", help="Include English -> Korean card."
+    ),
+    include_listening: bool = typer.Option(
+        True, "--listening/--no-listening", help="Include Listening card."
+    ),
+    include_image_card: bool = typer.Option(
+        False, "--image-card/--no-image-card", help="Include Image -> Korean card."
+    ),
 ):
     """
     Generate an Anki deck (.apkg) from a CSV file.
@@ -330,6 +335,39 @@ def generate_anki(
     model_id = get_deterministic_id(deck_title + "_model_v1")
     deck_id = get_deterministic_id(deck_title + "_deck_v1")
 
+    templates = []
+    if include_eng_kor:
+        templates.append(
+            {
+                "name": "English -> Korean",
+                "qfmt": '<div class="english">{{English}}</div>',
+                "afmt": '{{FrontSide}}<hr id="answer"><div class="korean">{{Korean}}<br>{{Audio}}</div>',
+            }
+        )
+    if include_listening:
+        templates.append(
+            {
+                "name": "Listening (Audio -> English + Audio)",
+                "qfmt": "{{Audio}}",
+                "afmt": '{{FrontSide}}<hr id="answer"><div class="english">{{English}}</div><div class="korean">{{Korean}}</div>',
+            }
+        )
+    if include_image_card:
+        templates.append(
+            {
+                "name": "Image -> Korean + Audio + English",
+                "qfmt": "{{Image}}",
+                "afmt": '{{FrontSide}}<hr id="answer"><div class="korean">{{Korean}} ({{English}})</div><br>{{Audio}}',
+            }
+        )
+
+    if not templates:
+        typer.echo(
+            "Error: No templates selected. Use flags to enable at least one card type.",
+            err=True,
+        )
+        raise typer.Exit(1)
+
     my_model = genanki.Model(
         model_id,
         "AnkiFlow Bidirectional Model",
@@ -339,23 +377,7 @@ def generate_anki(
             {"name": "Audio"},
             {"name": "Image"},
         ],
-        templates=[
-            {
-                "name": "English -> Korean",
-                "qfmt": '<div class="english">{{English}}</div>',
-                "afmt": '{{FrontSide}}<hr id="answer"><div class="korean">{{Korean}}<br>{{Audio}}<br>{{Image}}</div>',
-            },
-            {
-                "name": "Listening (Audio -> English + Audio)",
-                "qfmt": "{{Audio}}",
-                "afmt": '{{FrontSide}}<hr id="answer"><div class="english">{{English}}</div><div class="korean">{{Korean}}</div>',
-            },
-            {
-                "name": "Image -> Korean + Audio + English",
-                "qfmt": "{{Image}}",
-                "afmt": '{{FrontSide}}<hr id="answer"><div class="korean">{{Korean}} ({{English}})</div><br>{{Audio}}',
-            },
-        ],
+        templates=templates,
         css=CSS_STYLE,
     )
 
@@ -383,19 +405,23 @@ def generate_anki(
             if audio_path:
                 media_files.append(audio_path)
 
-            # 2. Image
-            image_file = f"img_{safe_name}.jpg"
-            image_path_local = os.path.join(MEDIA_DIR, image_file)
+            # 2. Image (Only if image card is enabled)
+            image_str = ""
+            if include_image_card:
+                image_file = f"img_{safe_name}.jpg"
+                image_path_local = os.path.join(MEDIA_DIR, image_file)
 
-            # Check if image exists, otherwise download
-            if os.path.exists(image_path_local):
-                media_files.append(image_path_local)
-            else:
-                image_url = get_pexels_image_url(eng)
-                if image_url:
-                    image_path = download_file(image_url, image_file)
-                    if image_path:
-                        media_files.append(image_path)
+                # Check if image exists, otherwise download
+                if os.path.exists(image_path_local):
+                    media_files.append(image_path_local)
+                    image_str = f'<img src="{image_file}">'
+                else:
+                    image_url = get_image_url(eng)
+                    if image_url:
+                        image_path = download_file(image_url, image_file)
+                        if image_path:
+                            media_files.append(image_path)
+                            image_str = f'<img src="{image_file}">'
 
             # 3. Add Note
             note = genanki.Note(
@@ -404,7 +430,7 @@ def generate_anki(
                     eng,
                     kor,
                     f"[sound:{audio_file}]",
-                    f'<img src="{image_file}">',
+                    image_str,
                 ],
             )
             deck.add_note(note)

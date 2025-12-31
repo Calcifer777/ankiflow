@@ -1,12 +1,12 @@
 # AnkiFlow
 
-AnkiFlow is a powerful CLI tool designed to streamline the creation of Korean language learning decks for Anki. It automates the process of fetching vocabulary from KRDict (Korean Learners' Dictionary), sourcing relevant images from Pexels, generating audio pronunciations, and packaging everything into a ready-to-import `.apkg` file.
+AnkiFlow is a CLI tool designed to streamline the creation of Korean language learning decks for Anki. It automates the process of fetching vocabulary collections, sourcing relevant media from DuckDuckGo Search, generating audio pronunciations, and packaging everything into a ready-to-import `.apkg` file.
 
 ## Features
 
 -   **Smart Vocabulary Fetching**: Download curated word lists from KRDict based on **Subject** (e.g., "Greeting", "Ordering Food") or **Semantic** (e.g., "Body Parts", "Emotions") categories.
 -   **Automated Media**:
-    -   **Images**: Automatically fetches relevant images for each word using the Pexels API.
+    -   **Images**: Automatically fetches relevant images for each word using DuckDuckGo Search.
     -   **Audio**: Generates Korean audio pronunciation (TTS) for every word.
 -   **Anki Integration**: Generates fully formatted Anki decks (`.apkg`) with a clean, bidirectional card design.
 -   **Unified CLI**: Simple, intuitive command-line interface powered by Typer.
@@ -15,7 +15,6 @@ AnkiFlow is a powerful CLI tool designed to streamline the creation of Korean la
 
 -   Python 3.13 or higher.
 -   **KRDict API Key**: Required to access the Korean dictionary data (obtainable from the [National Institute of Korean Language](https://krdict.korean.go.kr/eng/openApi/openApiRegister#)).
--   **Pexels API Key**: Required for fetching images (obtainable from [Pexels API](https://www.pexels.com/api/)).
 
 ## Installation
 
@@ -39,10 +38,7 @@ Create a `.env` file in the root directory of the project and add your API keys:
 # Required for fetching words
 KR_DICT_API_KEY=your_krdict_api_key_here
 
-# Required for fetching images
-PEXELS_API_KEY=your_pexels_api_key_here
-
-# Optional: Customize Pexels search queries
+# Optional: Customize search queries
 # ANKIFLOW_QUERY_PREFIX="minimalist"
 # ANKIFLOW_QUERY_SUFFIX=""
 ```
