@@ -1,3 +1,4 @@
+import asyncio
 import flet as ft
 import os
 
@@ -8,6 +9,7 @@ try:
         fetch_category_words,
         save_words_to_csv,
         create_deck,
+        set_api_key,
     )
 except ImportError:
     import sys
@@ -20,10 +22,11 @@ except ImportError:
         fetch_category_words,
         save_words_to_csv,
         create_deck,
+        set_api_key,
     )
 
 
-def main(page: ft.Page):
+async def main(page: ft.Page):
     page.title = "AnkiFlow"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.padding = 20
@@ -34,7 +37,13 @@ def main(page: ft.Page):
     def log(message: str):
         log_messages.controls.append(ft.Text(message))
         page.update()
-        log_messages.scroll_to(offset=-1, duration=300)
+        # log_messages.scroll_to(offset=-1, duration=300)
+
+    # --- INITIAL SETUP ---
+    stored_key = await ft.SharedPreferences().get("KR_DICT_API_KEY")
+    if stored_key:
+        set_api_key(stored_key)
+        log(f"Loaded API Key from storage.")  # Optional logging
 
     # --- TAB 1: DOWNLOAD CONTROLS ---
 
@@ -116,7 +125,6 @@ def main(page: ft.Page):
             e.control.disabled = True
             e.control.update()
 
-            # Clear previous results
             results_table.rows.clear()
             results_table.visible = False
             table_container.visible = False
@@ -250,11 +258,45 @@ def main(page: ft.Page):
         padding=20,
     )
 
-    # --- TABS LAYOUT (Flet 0.80.0+ Style) ---
+    # --- TAB 3: SETTINGS CONTROLS ---
+    api_key_field = ft.TextField(
+        label="KRDict API Key",
+        value=stored_key if stored_key else "",
+        password=True,
+        can_reveal_password=True,
+        width=400,
+    )
+
+    async def save_settings_click(e):
+        key = api_key_field.value
+        if key:
+            await ft.SharedPreferences().set(key="KR_DICT_API_KEY", value=key)
+            set_api_key(key)
+        else:
+            pass
+
+    save_settings_btn = ft.Button("Save Settings", on_click=save_settings_click)
+
+    settings_view = ft.Container(
+        content=ft.Column(
+            [
+                ft.Text("Settings", size=20, weight=ft.FontWeight.BOLD),
+                ft.Text(
+                    "Enter your KRDict API Key below. It will be saved for future sessions."
+                ),
+                api_key_field,
+                save_settings_btn,
+            ],
+            spacing=20,
+        ),
+        padding=20,
+    )
+
+    # --- TABS LAYOUT ---
 
     tabs_control = ft.Tabs(
         selected_index=0,
-        length=2,
+        length=3,
         expand=True,
         content=ft.Column(
             expand=True,
@@ -265,6 +307,7 @@ def main(page: ft.Page):
                             label="Download Collection", icon=ft.Icons.FILE_DOWNLOAD
                         ),
                         ft.Tab(label="Generate Deck", icon=ft.Icons.EDIT),
+                        ft.Tab(label="Settings", icon=ft.Icons.SETTINGS),
                     ]
                 ),
                 ft.TabBarView(
@@ -272,6 +315,7 @@ def main(page: ft.Page):
                     controls=[
                         download_view,
                         generate_view,
+                        settings_view,
                     ],
                 ),
             ],
@@ -293,5 +337,9 @@ def main(page: ft.Page):
     )
 
 
-if __name__ == "__main__":
+def start_gui():
     ft.run(main=main)
+
+
+if __name__ == "__main__":
+    start_gui()

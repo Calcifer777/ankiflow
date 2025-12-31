@@ -28,6 +28,14 @@ API_KEY = os.getenv("KR_DICT_API_KEY")
 if API_KEY:
     krdict.set_key(API_KEY)
 
+
+def set_api_key(key: str):
+    """Update the KRDict API key dynamically."""
+    global API_KEY
+    API_KEY = key
+    krdict.set_key(key)
+
+
 # Anki/Media Config
 MEDIA_DIR = "media_files"
 QUERY_PREFIX = os.getenv("ANKIFLOW_QUERY_PREFIX", "")
