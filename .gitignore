@@ -214,3 +214,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# anki
+*.apkg
+*.mp3
+*.jpg
+*.jpeg
+*.png
+*.csv

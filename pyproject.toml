@@ -5,14 +5,19 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "cssselect>=1.3.0",
     "genanki>=0.13.1",
     "gtts>=2.5.4",
+    "krdict-py>=3.0.2",
+    "lxml>=6.0.2",
     "python-dotenv>=1.2.1",
     "requests>=2.32.5",
+    "tenacity>=9.1.2",
+    "typer>=0.21.0",
 ]
 
 [project.scripts]
-hello = "ankiflow:hello"
+ankiflow = "ankiflow.cli:main"
 
 [build-system]
 requires = ["hatchling"]
