@@ -344,10 +344,17 @@ def generate_anki(
                 "afmt": '{{FrontSide}}<hr id="answer"><div class="korean">{{Korean}}<br>{{Audio}}</div>',
             }
         )
+        templates.append(
+            {
+                "name": "Korean -> English",
+                "qfmt": '<div class="korean">{{Korean}}</div>',
+                "afmt": '{{FrontSide}}<hr id="answer"><div class="english">{{English}}</div>',
+            }
+        )
     if include_listening:
         templates.append(
             {
-                "name": "Listening (Audio -> English + Audio)",
+                "name": "Listening (Korean Audio -> English)",
                 "qfmt": "{{Audio}}",
                 "afmt": '{{FrontSide}}<hr id="answer"><div class="english">{{English}}</div><div class="korean">{{Korean}}</div>',
             }
