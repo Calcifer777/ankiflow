@@ -1,0 +1,87 @@
+name: Build Standalone App
+
+on:
+  push:
+    branches: [ "main" ]
+    tags: [ "v*" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - windows-latest
+          - ubuntu-latest
+          - macos-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.13"
+
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+      shell: bash
+
+    - name: Install dependencies
+      run: |
+        uv sync
+      shell: bash
+
+    - name: Setup Flutter SDK
+      uses: subosito/flutter-action@v2
+      with:
+        channel: stable
+        cache: true
+
+    - name: Flet Build (Windows)
+      if: matrix.os == 'windows-latest'
+      run: |
+        source .venv/Scripts/activate
+        flet build windows --module-name ankiflow.gui --project ankiflow
+      shell: bash
+
+    - name: Flet Build (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        source .venv/bin/activate
+        # Install Linux dependencies for Flutter
+        sudo apt-get update
+        sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev
+        flet build linux --module-name ankiflow.gui --project ankiflow
+      shell: bash
+
+    - name: Flet Build (macOS)
+      if: matrix.os == 'macos-latest'
+      run: |
+        source .venv/bin/activate
+        flet build macos --module-name ankiflow.gui --project ankiflow
+      shell: bash
+
+    - name: Upload Artifact (Windows)
+      if: matrix.os == 'windows-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: AnkiFlow-Windows
+        path: build/windows/runner/Release/*
+
+    - name: Upload Artifact (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: AnkiFlow-Linux
+        path: build/linux/x64/release/bundle/*
+
+    - name: Upload Artifact (macOS)
+      if: matrix.os == 'macos-latest'
+      uses: actions/upload-artifact@v4
+      with:
+        name: AnkiFlow-macOS
+        path: build/macos/Build/Products/Release/ankiflow.app
