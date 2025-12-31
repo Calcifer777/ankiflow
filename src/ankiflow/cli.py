@@ -57,18 +57,7 @@ class CategoryType(str, Enum):
 
 
 # --- UTILS (from main.py) ---
-
-
-def load_css() -> str:
-    """Load CSS from package resources."""
-    try:
-        return importlib.resources.files("ankiflow").joinpath("style.css").read_text()
-    except Exception as e:
-        print(f"Warning: Could not load style.css from resources: {e}")
-        return ""
-
-
-CSS_STYLE = load_css()
+CSS_STYLE = importlib.resources.files("ankiflow").joinpath("style.css").read_text()
 
 
 def get_deterministic_id(string: str) -> int:
@@ -199,7 +188,6 @@ def download(
     """
     Download a word collection from KRDict. You must specify EXACTLY ONE of --subject or --semantic.
     """
-    print(f"DEBUG: subject_index={subject_index}, semantic_index={semantic_index}")
     # Mutually exclusive check
     if not bool(subject_index) ^ bool(semantic_index):
         typer.echo(
