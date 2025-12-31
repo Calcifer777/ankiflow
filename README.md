@@ -32,20 +32,27 @@ pip install .
 
 ## Configuration
 
-Create a `.env` file in the root directory of the project and add your API keys:
+Create a `.env` file in the root directory:
 
 ```env
 # Required for fetching words
 KR_DICT_API_KEY=your_krdict_api_key_here
-
-# Optional: Customize search queries
-# ANKIFLOW_QUERY_PREFIX="minimalist"
-# ANKIFLOW_QUERY_SUFFIX=""
 ```
 
 ## Usage
 
-The CLI is accessed via the `ankiflow` command (or `uv run ankiflow` / `python src/ankiflow/cli.py` if running from source).
+### GUI (Recommended)
+
+Launch the graphical interface for an easy, interactive experience.
+
+```bash
+ankiflow-gui
+```
+(Or `uv run ankiflow-gui` if using uv)
+
+### CLI
+
+The CLI is accessed via the `ankiflow` command.
 
 ### 1. List Available Categories
 
