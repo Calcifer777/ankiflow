@@ -2,30 +2,15 @@ import asyncio
 import flet as ft
 import os
 
-try:
-    from ankiflow.core import (
-        SUBJECT_CATEGORIES,
-        SEMANTIC_CATEGORIES,
-        fetch_category_words,
-        save_words_to_csv,
-        create_deck,
-        set_api_key,
-        get_app_data_dir,
-    )
-except ImportError:
-    import sys
-    from pathlib import Path
-
-    sys.path.append(str(Path(__file__).parent.parent))
-    from ankiflow.core import (
-        SUBJECT_CATEGORIES,
-        SEMANTIC_CATEGORIES,
-        fetch_category_words,
-        save_words_to_csv,
-        create_deck,
-        set_api_key,
-        get_app_data_dir,
-    )
+from ankiflow.core import (
+    SUBJECT_CATEGORIES,
+    SEMANTIC_CATEGORIES,
+    fetch_category_words,
+    save_words_to_csv,
+    create_deck,
+    set_api_key,
+    get_app_data_dir,
+)
 
 
 async def main(page: ft.Page):
@@ -118,6 +103,9 @@ async def main(page: ft.Page):
         visible=False,
     )
 
+    download_progress = ft.ProgressRing(color="green")
+    download_progress.visible = False
+
     def download_click(e):
         try:
             limit = int(limit_input.value)
@@ -126,16 +114,25 @@ async def main(page: ft.Page):
 
             log(f"Starting download... (Category: {idx}, Limit: {limit})")
 
-            e.control.disabled = True
-            e.control.update()
+            page.update()
 
             results_table.rows.clear()
             results_table.visible = False
             table_container.visible = False
+
+            download_progress.visible = True  # TODO: this does not work
+            download_progress.update()
+            download_progress_text.visible = True
+            download_progress_text.update()
+
             page.update()
 
+            e.control.disabled = True
             words = fetch_category_words(
-                category_idx=idx, is_subject=is_subject, limit=limit, callback=log
+                category_idx=idx,
+                is_subject=is_subject,
+                limit=limit,
+                callback=log,
             )
 
             if words:
@@ -177,10 +174,15 @@ async def main(page: ft.Page):
             log(f"Error: {ex}")
         finally:
             e.control.disabled = False
-            e.control.update()
+            download_progress.visible = False
+            download_progress.visible = False
+            download_progress_text.value = "Done!"
+            download_progress.update()
+            download_progress_text.update()
+            page.update()
 
+    download_progress_text = ft.Text("Downloading the collection...", visible=False)
     download_btn = ft.Button("Download", on_click=download_click)
-
     download_view = ft.Container(
         content=ft.Column(
             [
@@ -191,7 +193,7 @@ async def main(page: ft.Page):
                 ),
                 ft.Row([type_dropdown, category_dropdown]),
                 limit_input,
-                download_btn,
+                ft.Row([download_btn, download_progress, download_progress_text]),
                 table_container,
             ],
             spacing=20,
@@ -209,7 +211,9 @@ async def main(page: ft.Page):
     check_listening = ft.Checkbox(label="Listening (Audio -> Eng)", value=True)
     check_image = ft.Checkbox(label="Image -> Korean (Requires Download)", value=False)
 
-    def generate_click(e):
+    generate_progress = ft.ProgressRing(width=400, color="green", visible=False)
+
+    async def generate_click(e):
         try:
             csv_path = input_csv_field.value
             title = deck_title_field.value
@@ -222,7 +226,11 @@ async def main(page: ft.Page):
             log(f"Generating deck '{title}' from '{csv_path}'...")
 
             e.control.disabled = True
-            e.control.update()
+
+            generate_progress.visible = True
+            generate_progress.value = 0.1
+
+            page.update()
 
             assert csv_path is not None
             create_deck(
@@ -241,7 +249,8 @@ async def main(page: ft.Page):
             log(f"Error: {ex}")
         finally:
             e.control.disabled = False
-            e.control.update()
+            generate_progress.visible = False
+            page.update()
 
     generate_btn = ft.Button("Generate Deck", on_click=generate_click)
 
@@ -256,6 +265,7 @@ async def main(page: ft.Page):
                 check_listening,
                 check_image,
                 generate_btn,
+                generate_progress,
             ],
             spacing=10,
         ),
