@@ -10,6 +10,7 @@ try:
         save_words_to_csv,
         create_deck,
         set_api_key,
+        get_app_data_dir,
     )
 except ImportError:
     import sys
@@ -23,6 +24,7 @@ except ImportError:
         save_words_to_csv,
         create_deck,
         set_api_key,
+        get_app_data_dir,
     )
 
 
@@ -82,9 +84,11 @@ async def main(page: ft.Page):
     type_dropdown.on_change = on_type_change
 
     def get_collection_files():
-        os.makedirs("collections", exist_ok=True)
-        files = [f for f in os.listdir("collections") if f.endswith(".csv")]
-        return [ft.dropdown.Option(os.path.join("collections", f), f) for f in files]
+        collections_dir = get_app_data_dir()
+        if not os.path.exists(collections_dir):
+            return []
+        files = [f for f in os.listdir(collections_dir) if f.endswith(".csv")]
+        return [ft.dropdown.Option(os.path.join(collections_dir, f), f) for f in files]
 
     input_csv_field = ft.Dropdown(
         label="Select Collection CSV",

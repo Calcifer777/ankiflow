@@ -37,7 +37,15 @@ def set_api_key(key: str):
 
 
 # Anki/Media Config
-MEDIA_DIR = "media_files"
+def get_media_dir() -> str:
+    # Priority: FLET_APP_STORAGE_TEMP
+    temp_dir = os.getenv("FLET_APP_STORAGE_TEMP")
+    if not temp_dir:
+        temp_dir = "media_files"
+    os.makedirs(temp_dir, exist_ok=True)
+    return temp_dir
+
+MEDIA_DIR = get_media_dir()
 QUERY_PREFIX = os.getenv("ANKIFLOW_QUERY_PREFIX", "")
 QUERY_SUFFIX = os.getenv("ANKIFLOW_QUERY_SUFFIX", "")
 
@@ -66,11 +74,6 @@ except Exception:
 def get_deterministic_id(string: str) -> int:
     """Generate a unique but stable ID for genanki."""
     return int(hashlib.sha256(string.encode()).hexdigest(), 16) % (10**10)
-
-
-def ensure_media_dir():
-    if not os.path.exists(MEDIA_DIR):
-        os.makedirs(MEDIA_DIR)
 
 
 @retry(
@@ -229,9 +232,23 @@ def fetch_category_words(
     return all_words
 
 
+def get_app_data_dir() -> str:
+    """Returns the path to the application data directory."""
+    # Priority: FLET_APP_STORAGE_DATA (set by Flet in packaged apps)
+    base_dir = os.getenv("FLET_APP_STORAGE_DATA")
+    
+    if not base_dir:
+        # Fallback for development: ~/.ankiflow
+        base_dir = os.path.join(os.path.expanduser("~"), ".ankiflow")
+    
+    collections_dir = os.path.join(base_dir, "collections")
+    os.makedirs(collections_dir, exist_ok=True)
+    return collections_dir
+
+
 def save_words_to_csv(words: List[Dict[str, str]], category_name: str) -> str:
-    os.makedirs("collections", exist_ok=True)
-    filename = f"collections/{category_name.lower()}.csv"
+    collections_dir = get_app_data_dir()
+    filename = os.path.join(collections_dir, f"{category_name.lower()}.csv")
 
     with open(filename, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(
@@ -243,22 +260,45 @@ def save_words_to_csv(words: List[Dict[str, str]], category_name: str) -> str:
 
 
 def create_deck(
+
+
     input_csv: str,
+
+
     output_file: str,
+
+
     deck_title: str,
+
+
     include_eng_kor: bool = True,
+
+
     include_listening: bool = True,
+
+
     include_image_card: bool = False,
+
+
     callback: Callable[[str], None] = None,
+
+
 ):
+
+
     if callback is None:
 
-        def callback(s):
-            pass
 
-    ensure_media_dir()
+        def callback(s): pass
+
+
+    
+
 
     model_id = get_deterministic_id(deck_title + "_model_v1")
+
+
+
     deck_id = get_deterministic_id(deck_title + "_deck_v1")
 
     templates = []
