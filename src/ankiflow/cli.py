@@ -1,4 +1,5 @@
 import typer
+from pathlib import Path
 import os
 from rich.console import Console
 from rich.table import Table
@@ -58,7 +59,7 @@ def download(
         None, "--semantic", "-m", help="Index of the Semantic category."
     ),
     limit: int = typer.Option(
-        100, "--limit", "-l", help="Maximum number of words to download."
+        1000, "--limit", "-l", help="Maximum number of words to download."
     ),
 ):
     """
@@ -99,12 +100,14 @@ def download(
 
 @app.command(name="generate-anki")
 def generate_anki(
-    input_csv: str = typer.Option("words.csv", "--input", "-i", help="Input CSV file."),
+    input_csv: Path = typer.Option(
+        "words.csv", "--input", "-i", help="Input CSV file."
+    ),
     deck_title: str = typer.Option(
         "My Korean Deck", "--title", "-t", help="Title of the Anki deck."
     ),
-    output_file: str = typer.Option(
-        "deck.apkg", "--output", "-o", help="Output filename."
+    output_file: str | None = typer.Option(
+        None, "--output", "-o", help="Output filename."
     ),
     include_eng_kor: bool = typer.Option(
         True, "--eng-kor/--no-eng-kor", help="Include English -> Korean card."
@@ -119,9 +122,14 @@ def generate_anki(
     """
     Generate an Anki deck (.apkg) from a CSV file.
     """
-    if not os.path.exists(input_csv):
+    if not input_csv.exists():
         typer.echo(f"Error: Input file '{input_csv}' not found.", err=True)
         raise typer.Exit(1)
+
+    if output_file is None:
+        path_packages = Path.home() / ".ankiflow" / "packages"
+        path_packages.mkdir(exist_ok=True, parents=True)
+        output_file = output_file or path_packages / (input_csv.stem + ".apkg")
 
     try:
         create_deck(

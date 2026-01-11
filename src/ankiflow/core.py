@@ -1,6 +1,7 @@
 import os
 import csv
 import hashlib
+from pathlib import Path
 import requests
 import genanki
 import importlib.resources
@@ -44,6 +45,7 @@ def get_media_dir() -> str:
         temp_dir = "media_files"
     os.makedirs(temp_dir, exist_ok=True)
     return temp_dir
+
 
 MEDIA_DIR = get_media_dir()
 QUERY_PREFIX = os.getenv("ANKIFLOW_QUERY_PREFIX", "")
@@ -145,7 +147,7 @@ def fetch_category_words(
     category_idx: int,
     is_subject: bool,
     limit: int = 100,
-    callback: Callable[[str], None] = None,
+    callback: Callable[[str], None] | None = None,
 ) -> List[Dict[str, str]]:
     """
     Fetches words from KRDict based on category index.
@@ -236,11 +238,11 @@ def get_app_data_dir() -> str:
     """Returns the path to the application data directory."""
     # Priority: FLET_APP_STORAGE_DATA (set by Flet in packaged apps)
     base_dir = os.getenv("FLET_APP_STORAGE_DATA")
-    
+
     if not base_dir:
         # Fallback for development: ~/.ankiflow
         base_dir = os.path.join(os.path.expanduser("~"), ".ankiflow")
-    
+
     collections_dir = os.path.join(base_dir, "collections")
     os.makedirs(collections_dir, exist_ok=True)
     return collections_dir
@@ -260,45 +262,20 @@ def save_words_to_csv(words: List[Dict[str, str]], category_name: str) -> str:
 
 
 def create_deck(
-
-
-    input_csv: str,
-
-
+    input_csv: Path,
     output_file: str,
-
-
     deck_title: str,
-
-
     include_eng_kor: bool = True,
-
-
     include_listening: bool = True,
-
-
     include_image_card: bool = False,
-
-
-    callback: Callable[[str], None] = None,
-
-
+    callback: Callable[[str], None] | None = None,
 ):
-
-
     if callback is None:
 
-
-        def callback(s): pass
-
-
-    
-
+        def callback(s):
+            pass
 
     model_id = get_deterministic_id(deck_title + "_model_v1")
-
-
-
     deck_id = get_deterministic_id(deck_title + "_deck_v1")
 
     templates = []
@@ -348,7 +325,7 @@ def create_deck(
 
     callback(f"Processing CSV: {input_csv}")
 
-    with open(input_csv, mode="r", encoding="utf-8") as f:
+    with input_csv.open(mode="r", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
             eng = row.get("english", "")
