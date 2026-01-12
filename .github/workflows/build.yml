@@ -56,7 +56,6 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev
         flet build --module-name gui.py --project ankiflow -o build/linux --yes linux src/ankiflow
-        ls -lR build/linux
       shell: bash
 
     - name: Flet Build (macOS)
@@ -78,7 +77,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: AnkiFlow-Linux
-        path: build/linux/x64/release/bundle/*
+        path: build/linux/data/flutter_assets/app/app.zip
 
     - name: Upload Artifact (macOS)
       if: matrix.os == 'macos-latest'
