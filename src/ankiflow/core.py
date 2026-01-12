@@ -217,6 +217,8 @@ def fetch_category_words(
                             "korean": word,
                             "image_query": simple_translation,
                             "definition": definition,
+                            "category_type": "sub" if is_subject else "sem",
+                            "category_index": category_idx,
                         }
                     )
 
@@ -254,7 +256,15 @@ def save_words_to_csv(words: List[Dict[str, str]], category_name: str) -> str:
 
     with open(filename, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(
-            f, fieldnames=["english", "korean", "image_query", "definition"]
+            f,
+            fieldnames=[
+                "english",
+                "korean",
+                "image_query",
+                "definition",
+                "category_type",
+                "category_index",
+            ],
         )
         writer.writeheader()
         writer.writerows(words)
@@ -330,6 +340,8 @@ def create_deck(
         for row in reader:
             eng = row.get("english", "")
             kor = row.get("korean", "")
+            cat_type = row.get("category_type", "")
+            cat_idx = row.get("category_index", "")
 
             if not eng or not kor:
                 continue
@@ -337,9 +349,12 @@ def create_deck(
             callback(f"Processing: {eng} -> {kor}")
 
             safe_name = eng.replace(" ", "_").lower()
+            prefix = ""
+            if cat_type and cat_idx:
+                prefix = f"{cat_type}_{int(cat_idx):03}_"
 
             # 1. Audio
-            audio_file = f"ko_{safe_name}.mp3"
+            audio_file = f"{prefix}ko_{safe_name}.mp3"
             audio_path = generate_audio_file(kor, audio_file)
             if audio_path:
                 media_files.append(audio_path)
@@ -347,7 +362,7 @@ def create_deck(
             # 2. Image (Only if image card is enabled)
             image_str = ""
             if include_image_card:
-                image_file = f"img_{safe_name}.jpg"
+                image_file = f"{prefix}img_{safe_name}.jpg"
                 image_path_local = os.path.join(MEDIA_DIR, image_file)
 
                 # Check if image exists, otherwise download
